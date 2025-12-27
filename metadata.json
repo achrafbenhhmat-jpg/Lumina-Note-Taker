@@ -1,0 +1,7 @@
+{
+  "name": "Lumina Notes",
+  "description": "An aesthetic iOS-inspired AI note-taker that records, transcribes, and summarizes your lessons using Gemini's native audio intelligence.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
