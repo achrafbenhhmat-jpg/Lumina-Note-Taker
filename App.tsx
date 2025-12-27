@@ -18,7 +18,7 @@ const COLOR_PRESETS = [
   { name: 'Indigo', value: '#6366f1' },
 ];
 
-// --- Sub-Components moved outside to prevent re-creation/focus loss ---
+// --- Standalone components to prevent focus loss during typing ---
 
 const BuddyChatView: React.FC<{
   selectedLesson: LessonNote | null;
@@ -44,7 +44,7 @@ const BuddyChatView: React.FC<{
       <div ref={chatEndRef} />
     </div>
     
-    <div className="pt-3 pb-2 flex items-center space-x-2">
+    <div className="pt-3 pb-4 flex items-center space-x-2">
       <div className="flex-1">
         <input 
           type="text" 
@@ -88,11 +88,8 @@ const QuizView: React.FC<{
             let borderColor = "border-transparent";
             
             if (showResult) {
-              if (isCorrect) {
-                bgColor = "bg-green-500 text-white";
-              } else if (isSelected) {
-                bgColor = "bg-red-500 text-white";
-              }
+              if (isCorrect) bgColor = "bg-green-500 text-white";
+              else if (isSelected) bgColor = "bg-red-500 text-white";
             } else if (isSelected) {
               borderColor = "border-custom ring-4 ring-custom/10";
             }
@@ -116,10 +113,7 @@ const QuizView: React.FC<{
         </div>
       </div>
     ))}
-    <button 
-      onClick={() => setQuizAnswers({})}
-      className="w-full py-4 bg-zinc-100 dark:bg-zinc-900 text-custom font-black rounded-2xl active:scale-[0.98] transition-all uppercase tracking-widest text-xs"
-    >
+    <button onClick={() => setQuizAnswers({})} className="w-full py-4 bg-zinc-100 dark:bg-zinc-900 text-custom font-black rounded-2xl active:scale-[0.98] transition-all uppercase tracking-widest text-xs">
       Reset Quiz
     </button>
   </div>
@@ -134,13 +128,9 @@ const FlashCardView: React.FC<{
 }> = ({ cards, currentCardIndex, setCurrentCardIndex, isFlipped, setIsFlipped }) => {
   const card = cards[currentCardIndex];
   if (!card) return null;
-  
   return (
     <div className="flex flex-col items-center space-y-8 pt-2 h-full overflow-hidden">
-      <div 
-        className={`w-full h-[320px] flip-card cursor-pointer ${isFlipped ? 'flipped' : ''}`}
-        onClick={() => setIsFlipped(!isFlipped)}
-      >
+      <div className={`w-full h-[320px] flip-card cursor-pointer ${isFlipped ? 'flipped' : ''}`} onClick={() => setIsFlipped(!isFlipped)}>
         <div className="flip-card-inner">
           <div className="flip-card-front bg-white dark:bg-zinc-900 shadow-2xl border border-white/20 dark:border-zinc-800 backdrop-blur-3xl">
             <Sparkles className="absolute top-6 right-6 text-custom/20" size={24} />
@@ -155,26 +145,13 @@ const FlashCardView: React.FC<{
           </div>
         </div>
       </div>
-      
       <div className="flex items-center justify-between w-full px-6">
-        <button 
-          disabled={currentCardIndex === 0}
-          onClick={(e) => { e.stopPropagation(); setCurrentCardIndex(prev => prev - 1); setIsFlipped(false); }}
-          className="w-14 h-14 rounded-2xl flex items-center justify-center bg-white dark:bg-zinc-900 text-zinc-400 disabled:opacity-10 border border-zinc-100 dark:border-zinc-800 shadow-sm transition-all active:scale-90"
-        >
-          <ChevronLeft size={24} />
-        </button>
+        <button disabled={currentCardIndex === 0} onClick={() => { setCurrentCardIndex(prev => prev - 1); setIsFlipped(false); }} className="w-14 h-14 rounded-2xl flex items-center justify-center bg-white dark:bg-zinc-900 text-zinc-400 disabled:opacity-10 border border-zinc-100 dark:border-zinc-800 shadow-sm transition-all active:scale-90"><ChevronLeft size={24} /></button>
         <div className="text-center">
            <div className="text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tighter">{currentCardIndex + 1}</div>
            <div className="text-[9px] font-black text-zinc-400 uppercase tracking-[0.2em]">of {cards.length}</div>
         </div>
-        <button 
-          disabled={currentCardIndex === cards.length - 1}
-          onClick={(e) => { e.stopPropagation(); setCurrentCardIndex(prev => prev + 1); setIsFlipped(false); }}
-          className="w-14 h-14 rounded-2xl flex items-center justify-center bg-white dark:bg-zinc-900 text-zinc-400 disabled:opacity-10 border border-zinc-100 dark:border-zinc-800 shadow-sm transition-all active:scale-90"
-        >
-          <ChevronRight size={24} />
-        </button>
+        <button disabled={currentCardIndex === cards.length - 1} onClick={() => { setCurrentCardIndex(prev => prev + 1); setIsFlipped(false); }} className="w-14 h-14 rounded-2xl flex items-center justify-center bg-white dark:bg-zinc-900 text-zinc-400 disabled:opacity-10 border border-zinc-100 dark:border-zinc-800 shadow-sm transition-all active:scale-90"><ChevronRight size={24} /></button>
       </div>
     </div>
   );
@@ -302,7 +279,8 @@ const App: React.FC = () => {
       console.error("Processing failed", err);
       setIsProcessing(false);
       setView('list');
-      alert("AI processing failed. Check your API key.");
+      // Generic error message for compliance
+      alert("AI processing failed. Please try again later.");
     }
   };
 
@@ -310,8 +288,10 @@ const App: React.FC = () => {
     if (!chatInput.trim() || !selectedLesson || isTyping) return;
     const userMsg: ChatMessage = { role: 'user', text: chatInput };
     const currentHistory = selectedLesson.chatHistory || [];
-    const historyWithUser = [...currentHistory, userMsg];
-    const lessonWithUser = { ...selectedLesson, chatHistory: [...historyWithUser, { role: 'buddy', text: '' }] };
+    const historyWithUser: ChatMessage[] = [...currentHistory, userMsg];
+    // Fix: Explicitly type buddy message to avoid 'string' instead of '"buddy"' error (Error at line 292)
+    const buddyMsgPlaceholder: ChatMessage = { role: 'buddy', text: '' };
+    const lessonWithUser: LessonNote = { ...selectedLesson, chatHistory: [...historyWithUser, buddyMsgPlaceholder] };
     setSelectedLesson(lessonWithUser);
     const inputToProcess = chatInput;
     setChatInput('');
@@ -324,7 +304,9 @@ const App: React.FC = () => {
         (streamedText) => {
           setSelectedLesson(prev => {
             if (!prev) return null;
-            const newHistory = [...historyWithUser, { role: 'buddy', text: streamedText }];
+            // Fix: Explicitly type buddy message and the new history array (Error at line 302)
+            const buddyMsg: ChatMessage = { role: 'buddy', text: streamedText };
+            const newHistory: ChatMessage[] = [...historyWithUser, buddyMsg];
             return { ...prev, chatHistory: newHistory };
           });
         }
@@ -386,33 +368,25 @@ const App: React.FC = () => {
       <div className={`flex-1 flex flex-col ${bgImage ? 'bg-zinc-50/70 dark:bg-black/85 backdrop-blur-sm' : 'bg-zinc-50 dark:bg-black'}`}>
         <header className="px-6 pt-16 pb-4 flex justify-between items-end safe-top">
           <div className="space-y-1">
-            <h1 className="text-5xl font-black tracking-tighter text-zinc-900 dark:text-white">Lumina</h1>
+            <h1 className="text-4xl font-black tracking-tighter text-zinc-900 dark:text-white">Lumina</h1>
             <p className="text-zinc-500 dark:text-zinc-400 text-[10px] font-black uppercase tracking-[0.2em]">Study Smarter</p>
           </div>
-          <button 
-            onClick={() => setView('settings')}
-            className="p-4 rounded-3xl bg-white dark:bg-zinc-900 text-zinc-500 shadow-lg border border-zinc-100 dark:border-zinc-800 active:scale-90 transition-all"
-          >
+          <button onClick={() => setView('settings')} className="p-4 rounded-3xl bg-white dark:bg-zinc-900 text-zinc-500 shadow-lg border border-zinc-100 dark:border-zinc-800 active:scale-90 transition-all">
             <Settings size={22} strokeWidth={2.5} />
           </button>
         </header>
-
         <div className="flex-1 overflow-y-auto px-5 pb-40 no-scrollbar">
           {lessons.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-zinc-400 space-y-6 pb-20">
               <div className="w-32 h-32 rounded-[2.5rem] bg-white dark:bg-zinc-900 flex items-center justify-center shadow-2xl">
                 <Mic size={48} className="text-zinc-200 dark:text-zinc-800" strokeWidth={1.5} />
               </div>
-              <p className="text-sm px-12 text-center font-medium opacity-60">Record a lecture to generate notes and chat with Study Buddy.</p>
+              <p className="text-sm px-12 text-center font-medium opacity-60">Record a lecture to start.</p>
             </div>
           ) : (
             <div className="space-y-4 pt-2">
               {lessons.map(lesson => (
-                <div 
-                  key={lesson.id}
-                  onClick={() => { setSelectedLesson(lesson); setView('detail'); setDetailTab('summary'); }}
-                  className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-[2.5rem] p-5 shadow-sm flex items-center justify-between active:scale-[0.97] transition-all cursor-pointer border border-white/40 dark:border-zinc-800/50"
-                >
+                <div key={lesson.id} onClick={() => { setSelectedLesson(lesson); setView('detail'); setDetailTab('summary'); }} className="bg-white/90 dark:bg-zinc-900/90 backdrop-blur-xl rounded-[2.5rem] p-5 shadow-sm flex items-center justify-between active:scale-[0.97] transition-all cursor-pointer border border-white/40 dark:border-zinc-800/50">
                   <div className="flex items-center space-x-4">
                     <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white bg-custom shadow-custom">
                       <BrainCircuit size={28} strokeWidth={2.5} />
@@ -432,7 +406,6 @@ const App: React.FC = () => {
             </div>
           )}
         </div>
-
         <div className="fixed bottom-0 left-0 right-0 p-8 flex justify-center safe-bottom ios-blur bg-white/30 dark:bg-black/30">
           <button onClick={startRecording} className="w-20 h-20 rounded-full bg-custom text-white flex items-center justify-center shadow-custom transition-all active:scale-75 border-4 border-white dark:border-black">
             <Mic size={32} strokeWidth={3} />
@@ -445,29 +418,29 @@ const App: React.FC = () => {
   const renderRecordingView = () => (
     <div className="flex flex-col h-full bg-black text-white view-transition">
       <div className="flex-1 flex flex-col items-center justify-center space-y-12">
-        <div className="text-center space-y-6">
+        <div className="text-center space-y-4">
           <div className="inline-flex items-center bg-red-500/10 text-red-500 border border-red-500/20 px-5 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.3em] animate-pulse">
             Capturing Audio
           </div>
           <div className="text-8xl font-black tracking-tighter tabular-nums animate-breathe">{formatTime(recordTime)}</div>
         </div>
-        <div className="relative group">
-          <div className="relative w-64 h-64 rounded-full border border-white/5 flex items-center justify-center">
-            <div className="w-48 h-48 rounded-full bg-custom flex items-center justify-center shadow-2xl transition-transform duration-500">
+        <div className="relative">
+          <div className="w-60 h-60 rounded-full bg-custom/10 border border-white/5 flex items-center justify-center animate-breathe">
+            <div className="w-48 h-48 rounded-full bg-custom flex items-center justify-center shadow-2xl">
               <Mic size={72} className="text-white" strokeWidth={3} />
             </div>
           </div>
         </div>
       </div>
       <div className="p-20 pb-40 flex justify-center safe-bottom">
-        <button onClick={stopRecording} className="bg-white/5 w-20 h-20 flex items-center justify-center rounded-[2.5rem] border border-white/10 transition-all hover:bg-white/10 active:scale-75">
+        <button onClick={stopRecording} className="bg-white/5 w-20 h-20 flex items-center justify-center rounded-[2.5rem] border border-white/10 transition-all active:scale-75">
           <Square size={36} fill="white" strokeWidth={0} />
         </button>
       </div>
       {isProcessing && (
         <div className="fixed inset-0 bg-black/98 flex flex-col items-center justify-center space-y-8 z-50 p-10 text-center backdrop-blur-3xl animate-in fade-in">
           <Loader2 size={80} className="animate-spin text-custom" strokeWidth={3} />
-          <h2 className="text-4xl font-black text-white tracking-tight">AI Thinking...</h2>
+          <h2 className="text-3xl font-black text-white tracking-tight">AI Thinking...</h2>
         </div>
       )}
     </div>
@@ -494,67 +467,33 @@ const App: React.FC = () => {
                 { id: 'flashcards', icon: <Layers size={16} />, label: 'Cards' },
                 { id: 'buddy', icon: <MessageCircle size={16} />, label: 'Buddy' }
               ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setDetailTab(tab.id as DetailTab)}
-                  className={`flex-1 min-w-[75px] flex items-center justify-center space-x-1.5 py-3 rounded-2xl text-[10px] font-black transition-all ${
-                    detailTab === tab.id ? "bg-white dark:bg-zinc-800 text-custom shadow-lg" : "text-zinc-400"
-                  }`}
-                >
-                  {tab.icon}
-                  <span className="uppercase tracking-widest">{tab.label}</span>
+                <button key={tab.id} onClick={() => setDetailTab(tab.id as DetailTab)} className={`flex-1 min-w-[75px] flex items-center justify-center space-x-1.5 py-3 rounded-2xl text-[10px] font-black transition-all ${detailTab === tab.id ? "bg-white dark:bg-zinc-800 text-custom shadow-lg" : "text-zinc-400"}`}>
+                  {tab.icon} <span className="uppercase tracking-widest">{tab.label}</span>
                 </button>
               ))}
             </div>
           </header>
-
           <div className="flex-1 overflow-y-auto px-6 py-4 no-scrollbar">
             {detailTab === 'summary' && (
               <div className="space-y-8 animate-in fade-in duration-300">
-                <section className="space-y-3">
-                  <div className="bg-white/95 dark:bg-zinc-900/95 p-6 rounded-[2rem] border border-white/20 dark:border-zinc-800 shadow-xl leading-relaxed text-zinc-800 dark:text-zinc-100 whitespace-pre-wrap text-base font-medium tracking-tight">
-                    {selectedLesson.summary}
-                  </div>
+                <section className="bg-white/95 dark:bg-zinc-900/95 p-6 rounded-[2rem] border border-white/20 dark:border-zinc-800 shadow-xl leading-relaxed text-zinc-800 dark:text-zinc-100 whitespace-pre-wrap text-base font-medium tracking-tight">
+                  {selectedLesson.summary}
                 </section>
-                <section className="space-y-3">
-                  <div className="text-zinc-400 dark:text-zinc-500 text-sm italic leading-relaxed pl-4 border-l-2 border-custom/20 py-1 font-medium">
-                    {selectedLesson.transcript}
-                  </div>
+                <section className="text-zinc-400 dark:text-zinc-500 text-sm italic leading-relaxed pl-4 border-l-2 border-custom/20 py-1 font-medium">
+                  {selectedLesson.transcript}
                 </section>
               </div>
             )}
-            {detailTab === 'quiz' && (
-              <QuizView items={selectedLesson.quizzes} quizAnswers={quizAnswers} setQuizAnswers={setQuizAnswers} />
-            )}
-            {detailTab === 'flashcards' && (
-              <FlashCardView 
-                cards={selectedLesson.flashcards} 
-                currentCardIndex={currentCardIndex} 
-                setCurrentCardIndex={setCurrentCardIndex} 
-                isFlipped={isFlipped} 
-                setIsFlipped={setIsFlipped} 
-              />
-            )}
-            {detailTab === 'buddy' && (
-              <BuddyChatView 
-                selectedLesson={selectedLesson} 
-                chatInput={chatInput} 
-                setChatInput={setChatInput} 
-                handleSendMessage={handleSendMessage} 
-                isTyping={isTyping} 
-                chatEndRef={chatEndRef} 
-              />
-            )}
+            {detailTab === 'quiz' && <QuizView items={selectedLesson.quizzes} quizAnswers={quizAnswers} setQuizAnswers={setQuizAnswers} />}
+            {detailTab === 'flashcards' && <FlashCardView cards={selectedLesson.flashcards} currentCardIndex={currentCardIndex} setCurrentCardIndex={setCurrentCardIndex} isFlipped={isFlipped} setIsFlipped={setIsFlipped} />}
+            {detailTab === 'buddy' && <BuddyChatView selectedLesson={selectedLesson} chatInput={chatInput} setChatInput={setChatInput} handleSendMessage={handleSendMessage} isTyping={isTyping} chatEndRef={chatEndRef} />}
           </div>
         </div>
-        
         {isRenaming && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-8 bg-black/80 backdrop-blur-2xl animate-in fade-in">
             <div className="bg-white dark:bg-zinc-900 w-full max-w-sm rounded-[3rem] p-8 space-y-6 shadow-2xl border border-white/10">
               <h3 className="text-2xl font-black text-center dark:text-white tracking-tighter">Rename</h3>
-              <input autoFocus type="text" value={tempTitle} onChange={(e) => setTempTitle(e.target.value)}
-                className="w-full bg-zinc-100 dark:bg-zinc-800 p-5 rounded-2xl outline-none ring-4 ring-custom/10 dark:text-white font-black text-xl text-center"
-              />
+              <input autoFocus type="text" value={tempTitle} onChange={(e) => setTempTitle(e.target.value)} className="w-full bg-zinc-100 dark:bg-zinc-800 p-5 rounded-2xl outline-none ring-4 ring-custom/10 dark:text-white font-black text-xl text-center" />
               <div className="flex space-x-3">
                 <button onClick={() => setIsRenaming(false)} className="flex-1 py-4 text-zinc-400 font-black text-xs uppercase tracking-widest">Cancel</button>
                 <button onClick={renameLesson} className="flex-1 py-4 bg-custom text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-custom">Update</button>
@@ -574,37 +513,31 @@ const App: React.FC = () => {
           <h1 className="text-4xl font-black tracking-tighter dark:text-white">Settings</h1>
         </header>
         <div className="flex-1 overflow-y-auto px-6 space-y-8 pb-20 no-scrollbar">
-          <section className="space-y-4">
-            <div className="bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-zinc-100 dark:border-zinc-800 shadow-sm flex items-center justify-between">
-              <div>
-                <p className="font-black text-base dark:text-white">Dark Mode</p>
-                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Aesthetic appearance</p>
-              </div>
-              <button onClick={() => setIsDarkMode(!isDarkMode)} className={`w-14 h-8 rounded-full transition-all flex items-center px-1 ${isDarkMode ? 'bg-custom' : 'bg-zinc-200'}`}>
-                 <div className={`w-6 h-6 rounded-full bg-white shadow-xl transition-all ${isDarkMode ? 'translate-x-6' : 'translate-x-0'}`} />
-              </button>
+          <section className="bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-zinc-100 dark:border-zinc-800 shadow-sm flex items-center justify-between">
+            <div className="space-y-1">
+              <p className="font-black text-base dark:text-white">Dark Mode</p>
+              <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">Aesthetic appearance</p>
             </div>
+            <button onClick={() => setIsDarkMode(!isDarkMode)} className={`w-14 h-8 rounded-full transition-all flex items-center px-1 ${isDarkMode ? 'bg-custom' : 'bg-zinc-200'}`}>
+               <div className={`w-6 h-6 rounded-full bg-white shadow-xl transition-all ${isDarkMode ? 'translate-x-6' : 'translate-x-0'}`} />
+            </button>
           </section>
-          <section className="space-y-4">
-            <div className="bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-zinc-100 dark:border-zinc-800 shadow-sm grid grid-cols-3 gap-4">
-              {COLOR_PRESETS.map(c => (
-                <button key={c.value} onClick={() => setAccentColor(c.value)} className={`h-12 rounded-xl transition-all border-4 ${accentColor === c.value ? 'border-zinc-900 dark:border-white scale-110 shadow-lg' : 'border-transparent active:scale-95'}`} style={{ backgroundColor: c.value }} />
-              ))}
-            </div>
+          <section className="bg-white dark:bg-zinc-900 p-6 rounded-[2rem] border border-zinc-100 dark:border-zinc-800 shadow-sm grid grid-cols-3 gap-4">
+            {COLOR_PRESETS.map(c => (
+              <button key={c.value} onClick={() => setAccentColor(c.value)} className={`h-12 rounded-xl transition-all border-4 ${accentColor === c.value ? 'border-zinc-900 dark:border-white scale-110 shadow-lg' : 'border-transparent active:scale-95'}`} style={{ backgroundColor: c.value }} />
+            ))}
           </section>
-          <section className="space-y-4">
-            <div className="bg-white dark:bg-zinc-900 p-8 rounded-[2rem] border border-zinc-100 dark:border-zinc-800 shadow-sm space-y-6">
-               <input type="file" hidden ref={fileInputRef} onChange={handleImageUpload} accept="image/*" />
-               <button onClick={() => fileInputRef.current?.click()} className="w-full py-4 bg-custom text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-custom flex items-center justify-center space-x-2 active:scale-95">
-                 <ImageIcon size={16} /> <span>Import Wallpaper</span>
-               </button>
-               {bgImage && (
-                 <div className="h-40 w-full rounded-2xl overflow-hidden border-2 border-zinc-100 dark:border-zinc-800 relative shadow-lg">
-                    <img src={bgImage} className="w-full h-full object-cover" />
-                    <button onClick={clearBg} className="absolute top-2 right-2 p-2 bg-black/50 text-white rounded-full"><X size={16}/></button>
-                 </div>
-               )}
-            </div>
+          <section className="bg-white dark:bg-zinc-900 p-8 rounded-[2rem] border border-zinc-100 dark:border-zinc-800 shadow-sm space-y-6">
+             <input type="file" hidden ref={fileInputRef} onChange={handleImageUpload} accept="image/*" />
+             <button onClick={() => fileInputRef.current?.click()} className="w-full py-4 bg-custom text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-custom flex items-center justify-center space-x-2 active:scale-95">
+               <ImageIcon size={16} /> <span>Import Wallpaper</span>
+             </button>
+             {bgImage && (
+               <div className="h-40 w-full rounded-2xl overflow-hidden border-2 border-zinc-100 dark:border-zinc-800 relative shadow-lg">
+                  <img src={bgImage} className="w-full h-full object-cover" />
+                  <button onClick={clearBg} className="absolute top-2 right-2 p-2 bg-black/50 text-white rounded-full"><X size={16}/></button>
+               </div>
+             )}
           </section>
         </div>
       </div>
